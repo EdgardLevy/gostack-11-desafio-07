@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
+import { format, parseISO } from 'date-fns';
+
 import income from '../../assets/income.svg';
 import outcome from '../../assets/outcome.svg';
 import total from '../../assets/total.svg';
@@ -20,7 +22,7 @@ interface Transaction {
   formattedDate: string;
   type: 'income' | 'outcome';
   category: { title: string };
-  created_at: Date;
+  created_at: string;
 }
 
 interface Balance {
@@ -30,8 +32,8 @@ interface Balance {
 }
 
 interface Response {
-  transactions : Transaction[]
-  balance:Balance
+  transactions: Transaction[];
+  balance: Balance;
 }
 
 const Dashboard: React.FC = () => {
@@ -41,8 +43,18 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     async function loadTransactions(): Promise<void> {
       const response = await api.get<Response>('transactions');
-      const transactionsFormated = response.data.transactions.map(transaction=>{...transaction,formattedValue:formatValue(transaction.value)})
-      setTransactions(transactionsFormated);
+      const transactionsFormated = response.data.transactions;
+
+      setTransactions(
+        transactionsFormated.map(transaction => ({
+          ...transaction,
+          formattedValue: `${
+            transaction.type === 'outcome' ? ' - ' : ''
+          }${formatValue(transaction.value)}`,
+          formattedDate: format(parseISO(transaction.created_at), 'dd/MM/yyyy'),
+        })),
+      );
+
       setBalance(response.data.balance);
     }
 
@@ -92,9 +104,11 @@ const Dashboard: React.FC = () => {
 
             <tbody>
               {transactions.map(transaction => (
-                <tr>
+                <tr key={transaction.id}>
                   <td className="title">{transaction.title}</td>
-                  <td className="income">{transaction.formattedValue}</td>
+                  <td className={transaction.type}>
+                    {transaction.formattedValue}
+                  </td>
                   <td>{transaction.category.title}</td>
                   <td>{transaction.formattedDate}</td>
                 </tr>
